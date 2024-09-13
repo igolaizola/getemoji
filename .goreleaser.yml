@@ -1,0 +1,14 @@
+builds:
+  - id: getemoji
+    binary: getemoji
+    main: ./cmd/getemoji
+    goarch:
+      - amd64
+      - arm64
+      - arm
+archives:
+  - id: getemoji
+    builds:
+      - getemoji
+    format: zip
+    name_template: 'getemoji_{{ .Version }}_{{- if eq .Os "darwin" }}macos{{- else }}{{ .Os }}{{ end }}_{{ .Arch }}'
