@@ -33,6 +33,7 @@ type Config struct {
 }
 
 var unicodeReg = regexp.MustCompile(`^[0-9a-fA-F]+(-[0-9a-fA-F])*$`)
+var viewBoxReg = regexp.MustCompile(`(?i)\bviewBox\s*=\s*"([^"]+)"`)
 
 const outlinedPNGScale = 4
 const outlinedPNGMargin = 2
@@ -377,17 +378,74 @@ func addSVGOutline(svgContent []byte, colorHex string, radius float64) []byte {
 		return svgContent
 	}
 
+	openTag := svg[start : openEnd+1]
+	padding := math.Max(0.5, radius+0.5)
 	filter := fmt.Sprintf(`<defs><filter id="getemoji-outline" x="-25%%" y="-25%%" width="150%%" height="150%%"><feMorphology in="SourceAlpha" operator="dilate" radius="%.2f" result="expanded"/><feFlood flood-color="%s" result="color"/><feComposite in="color" in2="expanded" operator="in" result="outline"/><feMerge><feMergeNode in="outline"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`, radius, colorHex)
+
+	if minX, minY, width, height, ok := parseSVGViewBox(openTag); ok {
+		filter = fmt.Sprintf(`<defs><filter id="getemoji-outline" filterUnits="userSpaceOnUse" x="%s" y="%s" width="%s" height="%s"><feMorphology in="SourceAlpha" operator="dilate" radius="%s" result="expanded"/><feFlood flood-color="%s" result="color"/><feComposite in="color" in2="expanded" operator="in" result="outline"/><feMerge><feMergeNode in="outline"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`,
+			formatSVGFloat(minX-padding),
+			formatSVGFloat(minY-padding),
+			formatSVGFloat(width+padding*2),
+			formatSVGFloat(height+padding*2),
+			formatSVGFloat(radius),
+			colorHex,
+		)
+		openTag = replaceSVGViewBox(openTag, minX-padding, minY-padding, width+padding*2, height+padding*2)
+	}
 
 	var builder strings.Builder
 	builder.Grow(len(svg) + len(filter) + len(`<g filter="url(#getemoji-outline)"></g>`))
-	builder.WriteString(svg[:openEnd+1])
+	builder.WriteString(svg[:start])
+	builder.WriteString(openTag)
 	builder.WriteString(filter)
 	builder.WriteString(`<g filter="url(#getemoji-outline)">`)
 	builder.WriteString(svg[openEnd+1 : closeStart])
 	builder.WriteString(`</g>`)
 	builder.WriteString(svg[closeStart:])
 	return []byte(builder.String())
+}
+
+func parseSVGViewBox(openTag string) (float64, float64, float64, float64, bool) {
+	match := viewBoxReg.FindStringSubmatch(openTag)
+	if len(match) < 2 {
+		return 0, 0, 0, 0, false
+	}
+	fields := strings.Fields(match[1])
+	if len(fields) != 4 {
+		return 0, 0, 0, 0, false
+	}
+	minX, err := strconv.ParseFloat(fields[0], 64)
+	if err != nil {
+		return 0, 0, 0, 0, false
+	}
+	minY, err := strconv.ParseFloat(fields[1], 64)
+	if err != nil {
+		return 0, 0, 0, 0, false
+	}
+	width, err := strconv.ParseFloat(fields[2], 64)
+	if err != nil || width <= 0 {
+		return 0, 0, 0, 0, false
+	}
+	height, err := strconv.ParseFloat(fields[3], 64)
+	if err != nil || height <= 0 {
+		return 0, 0, 0, 0, false
+	}
+	return minX, minY, width, height, true
+}
+
+func replaceSVGViewBox(openTag string, minX, minY, width, height float64) string {
+	replacement := fmt.Sprintf(`viewBox="%s %s %s %s"`,
+		formatSVGFloat(minX),
+		formatSVGFloat(minY),
+		formatSVGFloat(width),
+		formatSVGFloat(height),
+	)
+	return viewBoxReg.ReplaceAllString(openTag, replacement)
+}
+
+func formatSVGFloat(v float64) string {
+	return strconv.FormatFloat(v, 'f', -1, 64)
 }
 
 func toEmoji(input string) string {
