@@ -7,6 +7,7 @@ It downloads the emoji from twemoji and can optionally resize it to a specified 
 
 - Generate emoji images in SVG or PNG format
 - Resize emojis to a specific size (for PNG output)
+- Add a white, black, or hex-color outline to the generated image
 - Support for emoji shortcodes and Unicode characters
 - Configurable via command-line flags, environment variables, or a YAML config file
 
@@ -37,6 +38,8 @@ getemoji --emoji <emoji> --size <size> --output <output>
 - `-emoji`: The emoji to generate (required)
 - `-size`: The size of the output image in pixels (required for PNG output)
 - `-output`: The output file name (optional, defaults to `icon.svg` or `icon<size>.png`)
+- `-outline`: Optional outline color: `white`, `black`, or a hex color like `#ff00aa`, `ff00aa`, or `f0a`
+- `-outline-size`: Optional outline size in pixels for PNG output, or approximate pixels for SVG output. Defaults to an automatic size based on `-size` for PNG output; for SVG output, defaults to a fixed approximate radius of `1.6` unless explicitly set.
 - `-config`: Path to a YAML configuration file (optional)
 
 ### 🌿 Environment Variables
@@ -61,7 +64,13 @@ GETEMOJI_EMOJI="smile" GETEMOJI_SIZE=64 GETEMOJI_OUTPUT="smile.png" getemoji
    getemoji -emoji "❤️" -size 64 -output heart.png
    ```
 
-3. Use a configuration file:
+3. Generate a 128x128 PNG of a rocket emoji with a custom outline:
+
+   ```
+   getemoji -emoji "rocket" -size 128 -outline "#ff00aa" -outline-size 8 -output rocket.png
+   ```
+
+4. Use a configuration file:
 
    ```
    getemoji -config config.yaml
@@ -72,6 +81,8 @@ GETEMOJI_EMOJI="smile" GETEMOJI_SIZE=64 GETEMOJI_OUTPUT="smile.png" getemoji
    ```yaml
    emoji: "rocket"
    size: 128
+   outline: white
+   outline-size: 8
    output: rocket.png
    ```
 
