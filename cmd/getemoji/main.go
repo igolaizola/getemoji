@@ -40,6 +40,8 @@ func newCommand() *ffcli.Command {
 	fs.IntVar(&cfg.Size, "size", 0, "size of the image")
 	fs.StringVar(&cfg.Emoji, "emoji", "", "emoji to draw")
 	fs.StringVar(&cfg.Output, "output", "", "output file")
+	fs.StringVar(&cfg.Outline, "outline", "", "outline color: white, black, or hex")
+	fs.IntVar(&cfg.OutlineSize, "outline-size", 0, "outline size in pixels (PNG) or approximate pixels (SVG)")
 
 	return &ffcli.Command{
 		ShortUsage: "getemoji [flags]",
